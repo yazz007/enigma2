@@ -297,6 +297,8 @@ class Network:
 				name = 'Zydas'
 			elif name == 'r871x_usb_drv':
 				name = 'Realtek'
+		elif os.path.exists("/tmp/bcm/%s"%iface):
+				name = 'Broadcom'
 		else:
 			name = _('Unknown')
 
@@ -663,6 +665,9 @@ class Network:
 				return 'ralink'
 			if module == 'zd1211b':
 				return 'zydas'
+		elif os.path.exists("/tmp/bcm/%s"%iface):
+			return 'wl'
+
 		return 'wext'
 
 	def calc_netmask(self,nmask):
@@ -674,7 +679,7 @@ class Network:
 		cidr_range = range(0, 32)
 		cidr = long(nmask)
 		if cidr not in cidr_range:
-			print 'cidr invalid: %d' % cidr
+			print '[Network] cidr invalid: %d' % cidr
 			return None
 		else:
 			nm = ((1L<<cidr)-1)<<(32-cidr)
