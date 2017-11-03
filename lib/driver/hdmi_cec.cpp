@@ -358,9 +358,19 @@ void eHdmiCEC::hdmiEvent(int what)
 #else
 			if (::read(hdmiFd, &rxmessage, 2) == 2)
 			{
-				if (::read(hdmiFd, &rxmessage.data, rxmessage.length) == rxmessage.length)
+				if (::read(hdmiFd, &rxmessage.data, rxmessage.length) > 0)
 				{
-					hasdata = true;
+					eDebugNoNewLineStart("[eHdmiCEC] received message");
+					for (int i = 0; i < rxmessage.length; i++)
+					{
+						eDebugNoNewLine(" %02X", rxmessage.data[i]);
+					}
+					eDebugNoNewLine("\n");
+					
+					if (rxmessage.data[0] == 0x44 || rxmessage.data[0] == 0x45 || rxmessage.data[0] == 0xA0 || rxmessage.data[0] == 0x87 || rxmessage.data[0] == 0x80 || rxmessage.data[0] == 0x46 || rxmessage.data[0] == 0x82 || rxmessage.data[0] == 0x00 || rxmessage.data[0] == 0x36)
+					{
+						hasdata = true;
+					}
 				}
 			}
 #endif
@@ -370,16 +380,29 @@ void eHdmiCEC::hdmiEvent(int what)
 		{
 			bool keypressed = false;
 			static unsigned char pressedkey = 0;
+			static unsigned char data_temp = 0;
 
-			eDebugNoNewLineStart("[eHdmiCEC] received message");
-			for (int i = 0; i < rxmessage.length; i++)
-			{
-				eDebugNoNewLine(" %02X", rxmessage.data[i]);
-			}
-			eDebugNoNewLine("\n");
 			bool hdmicec_report_active_menu = eConfigManager::getConfigBoolValue("config.hdmicec.report_active_menu", false);
 			if (hdmicec_report_active_menu)
 			{
+				if (rxmessage.data[4] == 0x44) 
+				{
+					eDebugNoNewLineStart("[eHdmiCEC] REGZALINK key pressed");
+					data_temp = rxmessage.data[5];
+					memset(rxmessage.data, 0, sizeof(rxmessage.data));	
+					rxmessage.data[0] = 0x44;
+					rxmessage.data[1] = data_temp;
+					eDebugNoNewLine(" %02X", rxmessage.data[1]);
+					eDebugNoNewLine("\n");
+				}
+				if (rxmessage.data[4] == 0x45) 
+				{
+					eDebugNoNewLineStart("[eHdmiCEC] REGZALINK key released");
+					memset(rxmessage.data, 0, sizeof(rxmessage.data));
+					rxmessage.data[0] = 0x45;
+					eDebugNoNewLine(" %02X", rxmessage.data[0]);
+					eDebugNoNewLine("\n");
+				}
 				switch (rxmessage.data[0])
 				{
 					case 0x44: /* key pressed */
@@ -513,8 +536,32 @@ long eHdmiCEC::translateKey(unsigned char code)
 		case 0x74:
 			key = 0x190;
 			break;
-		default:
+		case 0x40:		/* KEY_POWER */
+			key = 0x74;
+			break;
+		case 0x11:		/* KEY_DVD_MENU */
 			key = 0x8b;
+			break;
+		case 0x10:		/* KEY_TOP_MENU */
+			key = 0x16d;
+			break;
+		case 0x0a:		/* KEY_SETUP */
+			key = 0x8d;
+			break;
+		case 0x33:		/* KEY_SOUND */
+			key = 0xd5;
+			break;
+		case 0x35:		/* KEY_INFO */
+			key = 0x166;
+			break;
+		case 0x4a:		/* KEY_EJECTCD */
+			key = 0x172;
+			break;
+		case 0x0b:		/* KEY_CONTEXT_MENU */
+			key = 0x1b6;
+			break;
+		default:
+			key = 0x00;
 			break;
 	}
 	return key;
